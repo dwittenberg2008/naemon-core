@@ -42,6 +42,9 @@ user="naemon"
 group="naemon"
 checkconfig="false"
 
+# Default nice for performance, change in sysconfig file not here!
+NICELEVEL=-15
+
 test -e /etc/sysconfig/$prog && . /etc/sysconfig/$prog
 
 lockfile=/var/lock/subsys/$prog
@@ -78,7 +81,7 @@ start() {
     # We need to _make sure_ the precache is there and verified
     # Raise priority to make it run better
     if type start-stop-daemon >/dev/null 2>&1; then
-        start-stop-daemon --start --user $user --name $prog --pidfile $pidfile --exec $exec -- -d $config
+        start-stop-daemon --nicelevel $NICELEVEL --start --user $user --name $prog --pidfile $pidfile --exec $exec -- -d $config
     else
         daemon --user=$user $exec -d $config
     fi
