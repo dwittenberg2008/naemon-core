@@ -9,11 +9,39 @@ AM_INIT_AUTOMAKE
 AC_CONFIG_HEADERS([config.h naemon/lib/snprintf.h])
 AC_PREFIX_DEFAULT(/usr/local/naemon)
 
+AC_CONFIG_MACRO_DIR([m4])
+
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_MAKE_SET
 AM_PROG_CC_C_O
+
+AC_ARG_WITH([tests],
+            [AS_HELP_STRING([--with-tests], [Enable building tests (requires the check library)])])
+
+AS_IF([test "x$with_tests" != "xno"], [
+	m4_ifdef([PKG_CHECK_MODULES],
+	         [PKG_CHECK_MODULES([CHECK],
+	                            [check >= 0.9.0],
+	                            [],
+	                            [AC_MSG_RESULT([checking for non-pkgconfig enabled check])])],
+	         [true])
+	AS_IF([test "x$CHECK_LIBS" = "x"],
+	          [m4_ifdef([AM_PATH_CHECK],
+	                    [AM_PATH_CHECK([0.9.0])])],
+	          [true])
+	AS_IF([test "x$CHECK_LIBS" = "x"],
+	          [AC_MSG_ERROR([Install check <http://check.sourceforge.net/>, or re-run configure with the --without-tests flag])])
+])
+AM_CONDITIONAL([HAVE_CHECK], [test "x$with_tests" = "xyes"])
+
 AM_MISSING_PROG([GPERF], [gperf])
+# am_missing_prog doesn't seem to fail,
+# so I'm putting this redundant check in place to whine more loudly:
+AC_CHECK_PROG(GPERF_CHECK,gperf,yes)
+if test x"$GPERF_CHECK" != x"yes" ; then
+	AC_MSG_ERROR([You need to install gperf <https://www.gnu.org/software/gperf/> before building.])
+fi
 
 AM_CPPFLAGS="-D_GNU_SOURCE"
 AX_CHECK_COMPILE_FLAG([-Wall], AM_CFLAGS+=" -Wall")
@@ -165,6 +193,7 @@ AC_CONFIG_FILES([Makefile
                  naemon/Makefile
                  naemon/defaults.h
                  naemon/lib/Makefile
+                 tests/Makefile
                  sample-config/naemon.cfg
                  sample-config/resource.cfg
                  sample-config/conf.d/commands.cfg

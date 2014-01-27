@@ -565,10 +565,6 @@ void init_timing_loop(void)
 	/* add a status save event */
 	schedule_new_event(EVENT_STATUS_SAVE, TRUE, current_time + status_update_interval, TRUE, status_update_interval, NULL, TRUE, NULL, NULL, 0);
 
-	/* add a log rotation event if necessary */
-	if (log_rotation_method != LOG_ROTATION_NONE)
-		schedule_new_event(EVENT_LOG_ROTATION, TRUE, get_next_log_rotation_time(), TRUE, 0, (void *)get_next_log_rotation_time, TRUE, NULL, NULL, 0);
-
 	/* add a retention data save event if needed */
 	if (retain_state_information == TRUE && retention_update_interval > 0)
 		schedule_new_event(EVENT_RETENTION_SAVE, TRUE, current_time + (retention_update_interval * 60), TRUE, (retention_update_interval * 60), NULL, TRUE, NULL, NULL, 0);
@@ -1011,6 +1007,9 @@ int event_execution_loop(void)
 		/* get the current time */
 		time(&current_time);
 
+		if (sigrotate == TRUE)
+			rotate_log_file(current_time);
+
 		/* hey, wait a second...  we traveled back in time! */
 		if (current_time < last_time)
 			compensate_for_system_time_change((unsigned long)last_time, (unsigned long)current_time);
@@ -1158,14 +1157,6 @@ int handle_timed_event(timed_event *event)
 
 		/* run the host check */
 		run_scheduled_host_check(temp_host, event->event_options, latency);
-		break;
-
-	case EVENT_LOG_ROTATION:
-
-		log_debug_info(DEBUGL_EVENTS, 0, "** Log File Rotation Event. Latency: %.3fs\n", latency);
-
-		/* rotate the log file */
-		rotate_log_file(event->run_time);
 		break;
 
 	case EVENT_PROGRAM_SHUTDOWN:
